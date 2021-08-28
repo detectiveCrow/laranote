@@ -16,40 +16,45 @@
           <Field name="title" v-model="formData.title" />
           <ErrorMessage name="title" />
         </div>
-      </div>
-      <div class="note-edit-section">
-        <div class="note-edit-section-field">
-          <label for="contents"> Contents </label>
-          <div class="note-edit-section-field-tab">
-            <nav>
-              <button
-                type="button"
-                @click="toggleTabs('editor')"
-                v-bind:class="{ active: currentTab === 'editor' }"
+        <div class="note-edit-section">
+          <div class="note-edit-section-field">
+            <label for="contents"> Contents </label>
+            <div class="note-edit-section-field-tab">
+              <nav>
+                <button
+                  type="button"
+                  @click="toggleTabs('editor')"
+                  v-bind:class="{ active: currentTab === 'editor' }"
+                >
+                  Editor
+                </button>
+                <button
+                  type="button"
+                  @click="toggleTabs('preview')"
+                  v-bind:class="{ active: currentTab === 'preview' }"
+                >
+                  Preview
+                </button>
+              </nav>
+            </div>
+            <div ref="contents" class="note-edit-section-field-contents" :class="{ focused: isFocusingContents }">
+              <Field
+                v-show="currentTab === 'editor'"
+                as="textarea"
+                name="contents"
+                v-model="formData.contents"
+                @focus="focusContents"
+                @blur="blurContents"
+              />
+              <div
+                v-show="currentTab === 'preview'"
+                class="note-edit-section-field-contents-preview"
               >
-                Editor
-              </button>
-              <button
-                type="button"
-                @click="toggleTabs('preview')"
-                v-bind:class="{ active: currentTab === 'preview' }"
-              >
-                Preview
-              </button>
-            </nav>
-          </div>
-          <div class="note-edit-section-field-contents">
-            <Field
-              v-show="currentTab === 'editor'"
-              as="textarea"
-              name="contents"
-              v-model="formData.contents"
-            />
-            <div
-              v-show="currentTab === 'preview'"
-              class="note-edit-section-field-contents-preview"
-            >
-              <article v-html="markdownContent" class="prose"></article>
+                <article v-html="markdownContent" class="prose"></article>
+              </div>
+              <label class="note-edit-section-field-contents-uploader">
+                <input type="file" accept=".gif,.jpeg,.jpg,.png" @change="inputImage" multiple>
+              </label>
             </div>
             <ErrorMessage name="contents" />
           </div>
@@ -78,6 +83,14 @@
       </div>
     </Form>
 
+    <!-- preview test -->
+    <div v-for="image in formImages" :key="image.key">
+      <div>
+        {{ image.name }}
+        <img :src="image.src">
+      </div>
+    </div>
+
     <!-- Modal -->
     <note-modal
       :header="modalData.header"
@@ -105,6 +118,10 @@ export default {
   },
   props: {
     postUrl: {
+      type: String,
+      required: true,
+    },
+    imageUploadUrl: {
       type: String,
       required: true,
     },
@@ -147,6 +164,7 @@ export default {
         header: "",
         body: "",
       },
+      isFocusingContents: false,
     };
   },
   computed: {
@@ -174,6 +192,12 @@ export default {
     }
   },
   methods: {
+    focusContents() {
+      this.isFocusingContents = true;
+    },
+    blurContents() {
+      this.isFocusingContents = false;
+    },
     confirmSubmit() {
       this.isModalOpen = true;
     },
@@ -210,6 +234,24 @@ export default {
     toggleTabs(id) {
       this.currentTab = id;
     },
+    inputImage(event) {
+      let files = event.target.files;
+      let imageData = new FormData();
+      for(let i = 0; i<files.length; i++) {
+        imageData.append('images[' + i + ']', files[i]);
+      }
+      this.uploadImage(imageData);
+    },
+    uploadImage(images) {
+      axios
+        .post(this.imageUploadUrl, images)
+        .then((response) => {
+          console.log(response.data.path);
+        })
+        .catch((error) => {
+          console.log(error);
+        })
+    }
   },
 };
 </script>
